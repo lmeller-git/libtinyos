@@ -1,4 +1,6 @@
 #![no_std]
+pub(crate) mod syscalls;
+pub use syscalls::funcs::*;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
@@ -6,5 +8,5 @@ pub fn add(left: u64, right: u64) -> u64 {
 
 #[panic_handler]
 fn lib_panic(info: &core::panic::PanicInfo) -> ! {
-    loop {}
+    exit(2)
 }
