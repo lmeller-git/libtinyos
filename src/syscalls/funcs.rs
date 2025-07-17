@@ -78,3 +78,18 @@ pub fn yield_now() -> i64 {
 pub enum SysRes {
     Fail,
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn __c_write() {}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn __c_exit() {}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn __c_read() {}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn __c_yield() {}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn __c_heap() {}
