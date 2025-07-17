@@ -48,6 +48,11 @@ pub fn print(handle: usize, buf: *const u8, len: usize) -> isize {
     r.1 as isize
 }
 
+pub fn read(handle: usize, buf: *mut u8, len: usize) -> isize {
+    let r = unsafe { syscall!(6, handle, buf, len) };
+    r.1 as isize
+}
+
 pub fn stdout() -> usize {
     1
 }
@@ -56,9 +61,18 @@ pub fn stderr() -> usize {
     2
 }
 
+pub fn stdin() -> usize {
+    0
+}
+
 pub fn request_heap(size: usize) -> *mut u8 {
     let r = unsafe { syscall!(7, size as u64) };
     r.1 as *mut u8
+}
+
+pub fn yield_now() -> i64 {
+    let r = unsafe { syscall!(3) };
+    r.0 as i64
 }
 
 pub enum SysRes {
