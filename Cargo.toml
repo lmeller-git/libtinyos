@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-crate-type = ["rlib", "staticlib"]
+crate-type = ["rlib", "staticlib", "cdylib"]
 
 [features]
 default = []
@@ -18,3 +18,8 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
+lto = "fat"
+codegen-units = 1
+  
+[build-dependencies]
+cbindgen = "0.29.0"
