@@ -1,17 +1,11 @@
-[package]
-name = "libtinyos"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = [
+  "libtinyos",
+  "tinygraphics",
+]
+workspace.resolver = "3"
 
-[lib]
-crate-type = ["rlib", "staticlib", "cdylib"]
-
-[features]
-default = []
-
-[dependencies]
-linked_list_allocator = "0.10.5"
-conquer-once = { version = "0.4.0", default-features = false }
+[workspace.dependencies]
 
 [profile.dev]
 panic = "abort"
@@ -21,5 +15,3 @@ panic = "abort"
 lto = "fat"
 codegen-units = 1
   
-[build-dependencies]
-cbindgen = "0.29.0"

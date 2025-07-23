@@ -1,0 +1,17 @@
+[package]
+name = "libtinyos"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["rlib", "staticlib", "cdylib"]
+
+[features]
+default = []
+
+[dependencies]
+linked_list_allocator = "0.10.5"
+conquer-once = { version = "0.4.0", default-features = false }
+
+[build-dependencies]
+cbindgen = "0.29.0"

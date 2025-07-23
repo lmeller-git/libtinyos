@@ -8,5 +8,5 @@ fn main() {
 
     cbindgen::generate(crate_dir)
         .unwrap()
-        .write_to_file("c_bindings.h");
+        .write_to_file("tinygraphics.h");
 }

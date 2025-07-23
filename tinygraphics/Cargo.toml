@@ -1,0 +1,20 @@
+[package]
+name = "tinygraphics"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["rlib", "staticlib", "cdylib"]
+
+[features]
+default = []
+
+[dependencies]
+libtinyos = { path = "../libtinyos" }
+conquer-once = { version = "0.4.0", default-features = false }
+embedded-graphics = "0.8.1"
+embedded-graphics-core = "0.4.0"
+thiserror = { version = "2.0.12", default-features = false }
+
+[build-dependencies]
+cbindgen = "0.29.0"

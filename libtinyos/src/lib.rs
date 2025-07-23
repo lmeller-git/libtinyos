@@ -14,7 +14,7 @@ pub(crate) mod syscalls;
 pub use c_api::*;
 
 pub use crate::internal::alloc as tiny_alloc;
-pub use crate::internal::{collections, fs, io, path, process, sync, thread, time};
+pub use crate::internal::{collections, fs, io, path, process, sync, thread, time, utils};
 pub use syscalls::funcs::*;
 
 #[panic_handler]

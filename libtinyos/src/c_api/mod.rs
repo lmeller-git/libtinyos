@@ -15,7 +15,7 @@ pub unsafe extern "C" fn __print(buf: *const c_char) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn __c_write(handle: usize, buf: *const u8, len: usize) -> isize {
-    syscalls::funcs::print(handle, buf, len)
+    syscalls::funcs::write(handle, buf, len)
 }
 
 #[unsafe(no_mangle)]
