@@ -10,6 +10,7 @@ use core::{
 use linked_list_allocator::LockedHeap;
 
 const START_HEAP_SIZE: usize = 1024 * 500;
+const HEAP_EXT: usize = 1024 * 100;
 
 #[global_allocator]
 pub static GLOBAL_ALLOC: EnsureInitAlloc = EnsureInitAlloc::empty();
@@ -36,6 +37,15 @@ impl EnsureInitAlloc {
             locked_heap
         });
     }
+
+    fn request(&self) -> Result<(), ()> {
+        let ptr = request_heap(HEAP_EXT);
+        if ptr.is_null() {
+            return Err(());
+        }
+        unsafe { self.inner.get().unwrap().lock().extend(HEAP_EXT) };
+        Ok(())
+    }
 }
 
 unsafe impl GlobalAlloc for EnsureInitAlloc {
@@ -43,10 +53,21 @@ unsafe impl GlobalAlloc for EnsureInitAlloc {
         if !self.inner.is_initialized() {
             self.init();
         }
-        match self.inner.get().unwrap().lock().allocate_first_fit(layout) {
-            Ok(ptr) => ptr.as_ptr(),
-            Err(_) => null_mut(),
+
+        // try to allocate on existing heap
+        if let Ok(ptr) = self.inner.get().unwrap().lock().allocate_first_fit(layout) {
+            return ptr.as_ptr();
         }
+
+        // allocation failed -> try to extend heap and allocate
+        while self.request().is_ok() {
+            if let Ok(ptr) = self.inner.get().unwrap().lock().allocate_first_fit(layout) {
+                return ptr.as_ptr();
+            }
+        }
+
+        // could not allocate (likely heap size limit)
+        null_mut()
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
