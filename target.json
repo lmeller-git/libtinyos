@@ -16,9 +16,7 @@
     "ld.lld": [
       "-nostdlib", 
       "--gc-sections",
-      "-Tuser.ld",
-      "--strip-debug",
-      "-no-eh-frame-hdr"
+      "-Tuser.ld"
     ]
   },
   "relocation-model": "static"

@@ -20,5 +20,6 @@ pub use syscalls::funcs::*;
 #[panic_handler]
 fn lib_panic(info: &core::panic::PanicInfo) -> ! {
     eprintln!("{}", info);
+    eprintln!("exiting...");
     exit(2)
 }

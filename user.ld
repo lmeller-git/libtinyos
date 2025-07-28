@@ -38,7 +38,6 @@ SECTIONS
     } :data
     
     /DISCARD/ : {
-        *(.eh_frame*)
         *(.note .note.*)
         *(.note.GNU-stack)
     }
