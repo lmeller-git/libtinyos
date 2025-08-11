@@ -21,6 +21,6 @@ pub enum GraphicsError {
 
 impl Display for GraphicsError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!()
+        f.write_str("Unknown graphics error")
     }
 }

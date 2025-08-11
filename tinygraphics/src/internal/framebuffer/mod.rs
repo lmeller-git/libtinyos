@@ -132,3 +132,9 @@ impl FrameBuffer for RawFrameBuffer {
         }
     }
 }
+
+impl Default for RawFrameBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -10,11 +10,10 @@ use libtinyos::println;
 use crate::{
     BatchedFlushes, GraphicsError,
     backend::GraphicsBackend,
-    internal::{
-        abi::BoundingBox,
-        framebuffer::{FrameBuffer, RawFrameBuffer},
-    },
+    internal::{abi::BoundingBox, framebuffer::FrameBuffer},
 };
+
+pub use crate::internal::framebuffer::RawFrameBuffer;
 
 pub struct PrimitiveDrawer<'a, B, C>
 where
