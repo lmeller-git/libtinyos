@@ -138,3 +138,10 @@ impl Default for RawFrameBuffer {
         Self::new()
     }
 }
+
+// # SAFETY
+// RawFramebuffer can only point to memory managed by the kernel.
+// synchronization is also managed by the kernel
+// the underlying memory will remanin valid for the entire lifetime of the program
+unsafe impl Sync for RawFrameBuffer {}
+unsafe impl Send for RawFrameBuffer {}
