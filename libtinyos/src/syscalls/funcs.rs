@@ -48,8 +48,8 @@ pub fn write(handle: usize, buf: *const u8, len: usize) -> isize {
     r.1 as isize
 }
 
-pub fn read(handle: usize, buf: *mut u8, len: usize) -> isize {
-    let r = unsafe { syscall!(6, handle, buf, len) };
+pub fn read(handle: usize, buf: *mut u8, len: usize, timeout: usize) -> isize {
+    let r = unsafe { syscall!(6, handle, buf, len, timeout) };
     r.1 as isize
 }
 
