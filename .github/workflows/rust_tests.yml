@@ -29,3 +29,6 @@ jobs:
       run: |
         rustup show
         rustup component list --installed
+
+    - name: Build lib
+      run: cargo build --release
