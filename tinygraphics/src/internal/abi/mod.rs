@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use alloc::vec;
 use embedded_graphics::primitives::Rectangle;
 use libtinyos::{graphics, map_device, syscall};
 
@@ -83,6 +84,11 @@ impl GFXConfig {
 pub fn raw_flush(bounding_boxes: &[BoundingBox]) -> Result<(), GraphicsError> {
     let ptr = bounding_boxes.as_ptr();
     let len = bounding_boxes.len();
+    let mut arr = vec![len];
+    arr.extend_from_slice(unsafe {
+        &*core::ptr::slice_from_raw_parts(ptr as *const usize, len * size_of::<BoundingBox>() / 64)
+    });
+    let ptr = arr.as_ptr();
     let res = libtinyos::write(libtinyos::graphics(), ptr as *const u8, len);
     if res < 0 {
         Err(GraphicsError::default())
