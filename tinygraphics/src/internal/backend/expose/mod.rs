@@ -90,7 +90,7 @@ where
     type Color = C;
     fn flush(&mut self) -> Result<(), GraphicsError> {
         if self.is_dirty() {
-            self.flush_state.flush()?;
+            self.flush_state.flush(self.buf.fd())?;
         }
         Ok(())
     }

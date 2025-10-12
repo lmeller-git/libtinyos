@@ -29,8 +29,8 @@ impl BatchedFlushes {
         self.inner.is_empty()
     }
 
-    pub fn flush(&mut self) -> Result<(), GraphicsError> {
-        raw_flush(&self.inner)?;
+    pub fn flush(&mut self, fd: u32) -> Result<(), GraphicsError> {
+        raw_flush(&self.inner, fd)?;
         self.inner.clear();
         Ok(())
     }

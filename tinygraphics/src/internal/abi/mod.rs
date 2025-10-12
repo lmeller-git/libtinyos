@@ -2,7 +2,7 @@ use core::ptr::null_mut;
 
 use alloc::vec;
 use embedded_graphics::primitives::Rectangle;
-use libtinyos::{graphics, map_device, syscall};
+use libtinyos::{map_device, syscall};
 
 use crate::GraphicsError;
 
@@ -34,16 +34,18 @@ impl From<Rectangle> for BoundingBox {
 pub struct RawBitMap {
     addr: *mut u8,
     size: usize,
+    gfx_fd: u32,
 }
 
 impl RawBitMap {
     pub unsafe fn new(size: usize) -> Self {
         let mut addr = null_mut();
-        map_device(graphics(), &mut addr);
+        let fd = map_device(&mut addr);
         assert!(!addr.is_null());
         Self {
             addr: addr as *mut u8,
             size,
+            gfx_fd: fd,
         }
     }
 
@@ -53,6 +55,10 @@ impl RawBitMap {
 
     pub fn size(&self) -> usize {
         self.size
+    }
+
+    pub fn fd(&self) -> u32 {
+        self.gfx_fd
     }
 }
 
@@ -81,7 +87,7 @@ impl GFXConfig {
     }
 }
 
-pub fn raw_flush(bounding_boxes: &[BoundingBox]) -> Result<(), GraphicsError> {
+pub fn raw_flush(bounding_boxes: &[BoundingBox], fd: u32) -> Result<(), GraphicsError> {
     let ptr = bounding_boxes.as_ptr();
     let len = bounding_boxes.len();
     let mut arr = vec![len];
@@ -89,7 +95,7 @@ pub fn raw_flush(bounding_boxes: &[BoundingBox]) -> Result<(), GraphicsError> {
         &*core::ptr::slice_from_raw_parts(ptr as *const usize, len * size_of::<BoundingBox>() / 64)
     });
     let ptr = arr.as_ptr();
-    let res = libtinyos::write(libtinyos::graphics(), ptr as *const u8, len);
+    let res = libtinyos::write(fd as usize, ptr as *const u8, len);
     if res < 0 {
         Err(GraphicsError::default())
     } else {

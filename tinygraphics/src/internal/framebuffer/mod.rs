@@ -21,6 +21,7 @@ pub trait FrameBuffer {
     fn pixel_offset(&self, x: u32, y: u32) -> u32;
     fn set_pixel<C: RgbColor>(&self, x: u32, y: u32, color: &C);
     fn fill<C: RgbColor>(&self, area: Rectangle, color: &C);
+    fn fd(&self) -> u32;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -130,6 +131,10 @@ impl FrameBuffer for RawFrameBuffer {
                 self.fill_row(top_left.x as u32, row, area.size.width, color);
             }
         }
+    }
+
+    fn fd(&self) -> u32 {
+        self.buf.fd()
     }
 }
 
