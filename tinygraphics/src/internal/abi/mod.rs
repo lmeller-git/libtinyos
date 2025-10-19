@@ -1,10 +1,15 @@
-use core::ptr::null_mut;
+use core::{ptr::null_mut, str::FromStr};
 
-use alloc::vec;
+use alloc::vec::{self, Vec};
 use embedded_graphics::primitives::Rectangle;
-use libtinyos::{map_device, syscall};
+use libtinyos::{
+    syscall,
+    syscalls::{self, OpenOptions, PageTableFlags},
+};
 
 use crate::GraphicsError;
+
+const FRAMEBUFFER_START_ADDR: usize = 0x0000_4000_0000;
 
 #[repr(C)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -39,13 +44,26 @@ pub struct RawBitMap {
 
 impl RawBitMap {
     pub unsafe fn new(size: usize) -> Self {
-        let mut addr = null_mut();
-        let fd = map_device(&mut addr);
+        let addr = FRAMEBUFFER_START_ADDR as *mut u8;
+        let addr = unsafe {
+            syscalls::mmap(
+                size,
+                addr,
+                PageTableFlags::WRITABLE
+                    | PageTableFlags::PRESENT
+                    | PageTableFlags::USER_ACCESSIBLE,
+            )
+        }
+        .unwrap();
         assert!(!addr.is_null());
+
+        let gfx_fd =
+            unsafe { syscalls::open("/proc/gfx/manager".as_ptr(), OpenOptions::WRITE) }.unwrap();
+
         Self {
-            addr: addr as *mut u8,
+            addr: addr,
             size,
-            gfx_fd: fd,
+            gfx_fd: gfx_fd,
         }
     }
 
@@ -62,7 +80,6 @@ impl RawBitMap {
     }
 }
 
-#[deprecated]
 #[repr(C)]
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GFXConfig {
@@ -80,25 +97,44 @@ pub struct GFXConfig {
 
 impl GFXConfig {
     pub fn new() -> Self {
-        let mut s = Self::default();
+        // TODO write abstraction for this in libtinyos::io
+        let file =
+            unsafe { syscalls::open("/ram/.devconf/gfx/config.conf".as_ptr(), OpenOptions::READ) }
+                .unwrap();
+        let mut buffer = Vec::new();
+        let mut idx = 0;
+        buffer.extend_from_slice(&[0; 10]);
+        while let Ok(read) =
+            unsafe { syscalls::read(file, buffer[idx..].as_mut_ptr(), buffer.len() - idx, 0) }
+            && read > 0
+        {
+            idx += read as usize;
+            buffer.extend_from_slice(&[0; 10]);
+        }
+        let str_ = str::from_utf8(&buffer).unwrap();
+        let mut components = str_.split_whitespace();
 
-        _ = unsafe { syscall!(9, &mut s as *mut GFXConfig) };
-        s
+        fn parse_t_from_str<T: FromStr>(
+            components: &mut core::str::SplitWhitespace<'_>,
+        ) -> Result<T, T::Err> {
+            components.next().unwrap().parse()
+        }
+        Self {
+            red_mask_shift: parse_t_from_str(&mut components).unwrap(),
+            red_mask_size: parse_t_from_str(&mut components).unwrap(),
+            green_mask_shift: parse_t_from_str(&mut components).unwrap(),
+            green_mask_size: parse_t_from_str(&mut components).unwrap(),
+            blue_mask_shift: parse_t_from_str(&mut components).unwrap(),
+            blue_mask_size: parse_t_from_str(&mut components).unwrap(),
+            bpp: parse_t_from_str(&mut components).unwrap(),
+            width: parse_t_from_str(&mut components).unwrap(),
+            height: parse_t_from_str(&mut components).unwrap(),
+            pitch: parse_t_from_str(&mut components).unwrap(),
+        }
     }
 }
 
 pub fn raw_flush(bounding_boxes: &[BoundingBox], fd: u32) -> Result<(), GraphicsError> {
-    let ptr = bounding_boxes.as_ptr();
-    let len = bounding_boxes.len();
-    let mut arr = vec![len];
-    arr.extend_from_slice(unsafe {
-        &*core::ptr::slice_from_raw_parts(ptr as *const usize, len * size_of::<BoundingBox>() / 64)
-    });
-    let ptr = arr.as_ptr();
-    let res = libtinyos::write(fd as usize, ptr as *const u8, len);
-    if res < 0 {
-        Err(GraphicsError::default())
-    } else {
-        Ok(())
-    }
+    todo!()
+    // let res = unsafe { syscalls::write(fd, ptr as *const u8, len) };
 }

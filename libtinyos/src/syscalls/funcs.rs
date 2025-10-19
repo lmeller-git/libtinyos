@@ -1,87 +1,55 @@
-use crate::syscall;
+use crate::{
+    syscall,
+    syscalls::{FileDescriptor, OpenOptions, PageTableFlags, SysCallDispatch, SysResult},
+};
 
-pub fn exit(status: u64) -> ! {
-    unsafe { syscall!(1, status) };
+pub unsafe fn exit(status: i64) -> ! {
+    unsafe { syscall!(SysCallDispatch::Exit as u64, status) };
     unreachable!()
 }
 
-pub fn kill() {
-    todo!()
+pub unsafe fn kill(id: u64, status: i64) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Kill as u64, id, status) }.map(|_| ())
 }
 
-#[macro_export]
-macro_rules! println {
-    () => {
-        $crate::print!("\n")
-    };
-    ($($arg:tt)*) => {$crate::print!("{}\n", format_args!($($arg)*))};
+pub unsafe fn open(path: *const u8, flags: OpenOptions) -> SysResult<FileDescriptor> {
+    unsafe { syscall!(SysCallDispatch::Open as u64, path, flags.bits()) }
+        .map(|r| r as FileDescriptor)
 }
 
-#[macro_export]
-macro_rules! print {
-    () => {};
-    ($($arg:tt)*) => {$crate::print_str($crate::stdout(), &alloc::format!($($arg)*))};
+pub unsafe fn write(fd: FileDescriptor, buf: *const u8, len: usize) -> SysResult<isize> {
+    unsafe { syscall!(SysCallDispatch::Write as u64, fd, buf, len) }.map(|r| r as isize)
 }
 
-#[macro_export]
-macro_rules! eprintln {
-    () => {
-        $crate::eprint!("\n")
-    };
-    ($($arg:tt)*) => {$crate::eprint!("{}\n", format_args!($($arg)*))};
+pub unsafe fn read(
+    fd: FileDescriptor,
+    buf: *mut u8,
+    len: usize,
+    timeout: usize,
+) -> SysResult<isize> {
+    unsafe { syscall!(SysCallDispatch::Read as u64, fd, buf, len, timeout) }.map(|r| r as isize)
 }
 
-#[macro_export]
-macro_rules! eprint {
-    () => {};
-    ($($arg:tt)*) => {$crate::print_str($crate::stderr(), &alloc::format!($($arg)*))};
+pub unsafe fn yield_now() {
+    unsafe { syscall!(SysCallDispatch::Yield as u64) };
 }
 
-pub fn print_str(handle: usize, s: &str) -> isize {
-    let ptr = s.as_ptr();
-    let len = s.len();
-    write(handle, ptr, len)
+pub unsafe fn mmap(len: usize, ptr: *mut u8, flags: PageTableFlags) -> SysResult<*mut u8> {
+    unsafe { syscall!(SysCallDispatch::Mmap as u64, len, ptr, flags.bits()) }.map(|r| r as *mut u8)
 }
 
-pub fn write(handle: usize, buf: *const u8, len: usize) -> isize {
-    let r = unsafe { syscall!(4, handle, buf, len) };
-    r.1 as isize
+pub unsafe fn munmap(ptr: *mut u8, len: usize) {
+    unsafe { syscall!(SysCallDispatch::Munmap as u64, ptr, len) };
 }
 
-pub fn read(handle: usize, buf: *mut u8, len: usize, timeout: usize) -> isize {
-    let r = unsafe { syscall!(6, handle, buf, len, timeout) };
-    r.1 as isize
+pub unsafe fn clone() -> SysResult<bool> {
+    unsafe { syscall!(SysCallDispatch::Clone as u64) }.map(|r| if r == 0 { false } else { true })
 }
 
-pub fn stdout() -> usize {
-    1
+pub unsafe fn get_pid() -> SysResult<u64> {
+    unsafe { syscall!(SysCallDispatch::GetPid as u64) }
 }
 
-pub fn stderr() -> usize {
-    2
-}
-
-pub fn stdin() -> usize {
-    0
-}
-
-pub fn request_heap(size: usize) -> *mut u8 {
-    let r = unsafe { syscall!(7, size as u64) };
-    r.1 as *mut u8
-}
-
-pub fn yield_now() -> i64 {
-    let r = unsafe { syscall!(3) };
-    r.0 as i64
-}
-
-pub fn map_device(addr: &mut *mut ()) -> u32 {
-    let (r, r2) = unsafe { syscall!(8, *addr) };
-    assert!(!(r2 as usize as *mut ()).is_null());
-    *addr = r2 as usize as *mut ();
-    r as u32
-}
-
-pub enum SysRes {
-    Fail,
+pub unsafe fn chg_machine_state() {
+    unsafe { syscall!(SysCallDispatch::Machine as u64) };
 }

@@ -1,4 +1,7 @@
-use crate::{println, request_heap};
+use crate::{
+    println,
+    syscalls::{self, PageTableFlags},
+};
 
 use conquer_once::spin::OnceCell;
 use core::{
@@ -7,7 +10,9 @@ use core::{
 };
 use linked_list_allocator::{LockedHeap, align_up_size};
 
-const START_HEAP_SIZE: usize = 1024 * 100;
+const HEAP_START_ADDR: u64 = 0x0000_2000_0000;
+const START_HEAP_SIZE: usize = 1024 * 100; // 100 KiB
+const MAX_HEAP_SIZE: usize = 1024 * 100000; // 100.000 KiB == 100 MiB
 
 const ALIGN: usize = 4096; // as kernel pages are 4 KiB currently
 
@@ -41,25 +46,49 @@ impl EnsureInitAlloc {
 
     fn init(&self) {
         _ = self.inner.try_init_once(|| {
-            let heap = request_heap(START_HEAP_SIZE);
-            if heap.is_null() {
+            let heap_ptr = unsafe {
+                syscalls::mmap(
+                    START_HEAP_SIZE,
+                    START_HEAP_SIZE as *mut u8,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::WRITABLE
+                        | PageTableFlags::USER_ACCESSIBLE,
+                )
+            }
+            .unwrap_or(null_mut());
+
+            if heap_ptr.is_null() {
                 panic!("Allocator could not be initialized");
             }
             let locked_heap = LockedHeap::empty();
-            unsafe { locked_heap.lock().init(heap, START_HEAP_SIZE) };
+            unsafe { locked_heap.lock().init(heap_ptr, START_HEAP_SIZE) };
             locked_heap
         });
     }
 
     fn request(&self) -> Result<(), ()> {
-        let size = self.inner.get().unwrap().lock().size() * 2;
-        let size = align_up_size(size, ALIGN);
+        let old_size = self.inner.get().unwrap().lock().size();
+        let new_size = old_size * 2;
+        if new_size > MAX_HEAP_SIZE {
+            return Err(());
+        }
+        let new_size = align_up_size(new_size, ALIGN);
 
-        let ptr = request_heap(size);
+        let ptr = unsafe {
+            syscalls::mmap(
+                new_size - old_size,
+                (HEAP_START_ADDR as usize + old_size) as *mut u8,
+                PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::USER_ACCESSIBLE,
+            )
+        }
+        .map_err(|_| ())?;
+
         if ptr.is_null() {
             return Err(());
         }
-        unsafe { self.inner.get().unwrap().lock().extend(size) };
+        unsafe { self.inner.get().unwrap().lock().extend(new_size - old_size) };
         Ok(())
     }
 }

@@ -10,11 +10,11 @@
 extern "C" {
 #endif // __cplusplus
 
-void __c_exit(uint64_t status);
+void __c_exit(int64_t status);
 
-ptrdiff_t __c_read(size_t handle, uint8_t *buf, size_t len);
+ptrdiff_t __c_read(uint32_t handle, uint8_t *buf, size_t len, size_t timeout);
 
-ptrdiff_t __c_write(size_t handle, const uint8_t *buf, size_t len);
+ptrdiff_t __c_write(uint32_t handle, const uint8_t *buf, size_t len);
 
 void __c_yield(void);
 

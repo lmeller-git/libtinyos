@@ -4,7 +4,10 @@ use core::{
     mem,
 };
 
-use crate::{stdout, syscalls, tiny_alloc, yield_now};
+use crate::{
+    syscalls::{self, STDOUT_FILENO},
+    tiny_alloc,
+};
 
 pub mod abi;
 
@@ -14,27 +17,29 @@ pub unsafe extern "C" fn __print(buf: *const c_char) {
     let buf = buf.to_string_lossy();
     let len = buf.len();
     let buf = buf.as_ptr();
-    __c_write(stdout(), buf, len);
+    unsafe { __c_write(STDOUT_FILENO, buf, len) };
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn __c_write(handle: usize, buf: *const u8, len: usize) -> isize {
-    syscalls::funcs::write(handle, buf, len)
+pub unsafe extern "C" fn __c_write(handle: u32, buf: *const u8, len: usize) -> isize {
+    let r = unsafe { syscalls::write(handle, buf, len) };
+    if let Ok(res) = r { res } else { -1 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn __c_exit(status: u64) -> ! {
-    syscalls::funcs::exit(status)
+pub unsafe extern "C" fn __c_exit(status: i64) -> ! {
+    unsafe { syscalls::exit(status) }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn __c_read(handle: usize, buf: *mut u8, len: usize) -> isize {
-    todo!()
+pub extern "C" fn __c_read(handle: u32, buf: *mut u8, len: usize, timeout: usize) -> isize {
+    let r = unsafe { syscalls::read(handle, buf, len, timeout) };
+    if let Ok(res) = r { res } else { -1 }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn __c_yield() {
-    yield_now();
+    unsafe { syscalls::yield_now() };
 }
 
 #[unsafe(no_mangle)]
@@ -45,5 +50,6 @@ pub unsafe extern "C" fn malloc(size: usize) -> *mut u8 {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn free(ptr: *mut u8) {
+    // TODO need to keep a map of ptr -> layout to deallocate the correct chunk
     todo!()
 }
