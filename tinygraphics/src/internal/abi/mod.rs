@@ -9,7 +9,7 @@ use libtinyos::{
 
 use crate::GraphicsError;
 
-const FRAMEBUFFER_START_ADDR: usize = 0x0000_4000_0000;
+// const FRAMEBUFFER_START_ADDR: usize = 0x0000_1000_0000;
 
 #[repr(C)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -44,11 +44,11 @@ pub struct RawBitMap {
 
 impl RawBitMap {
     pub unsafe fn new(size: usize) -> Self {
-        let addr = FRAMEBUFFER_START_ADDR as *mut u8;
+        // let addr = FRAMEBUFFER_START_ADDR as *mut u8;
         let addr = unsafe {
             syscalls::mmap(
                 size,
-                addr,
+                null_mut(),
                 PageTableFlags::WRITABLE
                     | PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE,
