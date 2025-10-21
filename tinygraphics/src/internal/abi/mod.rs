@@ -3,7 +3,7 @@ use core::{ptr::null_mut, str::FromStr};
 use alloc::vec::{self, Vec};
 use embedded_graphics::primitives::Rectangle;
 use libtinyos::{
-    syscall,
+    println, syscall,
     syscalls::{self, OpenOptions, PageTableFlags},
 };
 
@@ -53,12 +53,14 @@ impl RawBitMap {
                     | PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE,
             )
-        }
-        .unwrap();
+        };
+
+        let addr = addr.unwrap();
         assert!(!addr.is_null());
 
+        let f = "/proc/kernel/gfx/fb";
         let gfx_fd =
-            unsafe { syscalls::open("/proc/gfx/manager".as_ptr(), OpenOptions::WRITE) }.unwrap();
+            unsafe { syscalls::open(f.as_ptr(), f.bytes().len(), OpenOptions::WRITE) }.unwrap();
 
         Self {
             addr: addr,
@@ -98,9 +100,9 @@ pub struct GFXConfig {
 impl GFXConfig {
     pub fn new() -> Self {
         // TODO write abstraction for this in libtinyos::io
+        let f = "/ram/.devconf/gfx/config.conf";
         let file =
-            unsafe { syscalls::open("/ram/.devconf/gfx/config.conf".as_ptr(), OpenOptions::READ) }
-                .unwrap();
+            unsafe { syscalls::open(f.as_ptr(), f.bytes().len(), OpenOptions::READ) }.unwrap();
         let mut buffer = Vec::new();
         let mut idx = 0;
         buffer.extend_from_slice(&[0; 10]);
@@ -111,7 +113,8 @@ impl GFXConfig {
             idx += read as usize;
             buffer.extend_from_slice(&[0; 10]);
         }
-        let str_ = str::from_utf8(&buffer).unwrap();
+
+        let str_ = str::from_utf8(&buffer[..idx]).unwrap();
         let mut components = str_.split_whitespace();
 
         fn parse_t_from_str<T: FromStr>(
@@ -119,6 +122,7 @@ impl GFXConfig {
         ) -> Result<T, T::Err> {
             components.next().unwrap().parse()
         }
+
         Self {
             red_mask_shift: parse_t_from_str(&mut components).unwrap(),
             red_mask_size: parse_t_from_str(&mut components).unwrap(),

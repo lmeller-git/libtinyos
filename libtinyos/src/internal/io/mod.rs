@@ -11,7 +11,7 @@ macro_rules! println {
 #[macro_export]
 macro_rules! print {
     () => {};
-    ($($arg:tt)*) => {$crate::io::print_str($crate::syscalls::STDOUT_FILENE, &alloc::format!($($arg)*)).unwrap()};
+    ($($arg:tt)*) => {$crate::io::print_str($crate::syscalls::STDOUT_FILENO, &alloc::format!($($arg)*)).unwrap()};
 }
 
 #[macro_export]

@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub unsafe fn exit(status: i64) -> ! {
-    unsafe { syscall!(SysCallDispatch::Exit as u64, status) };
+    unsafe { syscall!(SysCallDispatch::Exit as u64, status) }.unwrap();
     unreachable!()
 }
 
@@ -12,8 +12,8 @@ pub unsafe fn kill(id: u64, status: i64) -> SysResult<()> {
     unsafe { syscall!(SysCallDispatch::Kill as u64, id, status) }.map(|_| ())
 }
 
-pub unsafe fn open(path: *const u8, flags: OpenOptions) -> SysResult<FileDescriptor> {
-    unsafe { syscall!(SysCallDispatch::Open as u64, path, flags.bits()) }
+pub unsafe fn open(path: *const u8, len: usize, flags: OpenOptions) -> SysResult<FileDescriptor> {
+    unsafe { syscall!(SysCallDispatch::Open as u64, path, len, flags.bits()) }
         .map(|r| r as FileDescriptor)
 }
 
@@ -31,7 +31,7 @@ pub unsafe fn read(
 }
 
 pub unsafe fn yield_now() {
-    unsafe { syscall!(SysCallDispatch::Yield as u64) };
+    _ = unsafe { syscall!(SysCallDispatch::Yield as u64) };
 }
 
 pub unsafe fn mmap(len: usize, ptr: *mut u8, flags: PageTableFlags) -> SysResult<*mut u8> {
