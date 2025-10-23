@@ -7,7 +7,8 @@ use embedded_graphics::{
 use libtinyos::syscalls::{self, PageTableFlags};
 
 use crate::{
-    internal::abi::{FRAMEBUFFER_START_ADDR, GFXConfig, KERNEL_FB, RawBitMap},
+    GraphicsError,
+    internal::abi::{BoundingBox, FRAMEBUFFER_START_ADDR, GFXConfig, KERNEL_FB, RawBitMap},
     utils::memset,
 };
 
@@ -22,6 +23,7 @@ pub trait FrameBuffer {
     fn pixel_offset(&self, x: u32, y: u32) -> u32;
     fn set_pixel<C: RgbColor>(&self, x: u32, y: u32, color: &C);
     fn fill<C: RgbColor>(&self, area: Rectangle, color: &C);
+    fn flush(&self, bound: &BoundingBox) -> Result<(), GraphicsError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -131,6 +133,12 @@ impl FrameBuffer for RawFrameBuffer {
                 self.fill_row(top_left.x as u32, row, area.size.width, color);
             }
         }
+    }
+
+    fn flush(&self, _bound: &BoundingBox) -> Result<(), GraphicsError> {
+        todo!(
+            "RawBitmap needs to mmap the kernel fb somewhere and flush to it. (Only the case if this is not == kernel fb. (Maybe remove this for clarity))"
+        )
     }
 }
 
@@ -260,5 +268,10 @@ impl FrameBuffer for KernelFBWrapper {
                 self.fill_row(top_left.x as u32, row, area.size.width, color);
             }
         }
+    }
+
+    fn flush(&self, _bound: &BoundingBox) -> Result<(), GraphicsError> {
+        // writes to this fb are immediately visible
+        Ok(())
     }
 }

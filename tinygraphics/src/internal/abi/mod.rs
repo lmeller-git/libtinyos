@@ -160,37 +160,37 @@ impl GFXConfig {
 
 pub const KERNEL_FB: &str = "/proc/kernel/gfx/fb";
 
-pub fn raw_flush<F: FrameBuffer>(area: &BoundingBox, fb: &F) -> Result<(), GraphicsError> {
-    let fd = unsafe {
-        syscalls::open(
-            KERNEL_FB.as_ptr(),
-            KERNEL_FB.bytes().len(),
-            OpenOptions::WRITE,
-        )
-    }
-    .map_err(|_| GraphicsError::Unknown)?;
-    let dirty_area_start = unsafe {
-        fb.addr()
-            .add(fb.pixel_offset(area.x as u32, area.y as u32) as usize)
-    };
-    let dirty_area_end = unsafe {
-        fb.addr().add(
-            fb.pixel_offset((area.width + area.x) as u32, (area.height + area.y) as u32) as usize,
-        )
-    };
+// pub fn raw_flush<F: FrameBuffer>(area: &BoundingBox, fb: &F) -> Result<(), GraphicsError> {
+//     let fd = unsafe {
+//         syscalls::open(
+//             KERNEL_FB.as_ptr(),
+//             KERNEL_FB.bytes().len(),
+//             OpenOptions::WRITE,
+//         )
+//     }
+//     .map_err(|_| GraphicsError::Unknown)?;
+//     let dirty_area_start = unsafe {
+//         fb.addr()
+//             .add(fb.pixel_offset(area.x as u32, area.y as u32) as usize)
+//     };
+//     let dirty_area_end = unsafe {
+//         fb.addr().add(
+//             fb.pixel_offset((area.width + area.x) as u32, (area.height + area.y) as u32) as usize,
+//         )
+//     };
 
-    let dirty_area_length = unsafe { dirty_area_end.offset_from(dirty_area_start) };
+//     let dirty_area_length = unsafe { dirty_area_end.offset_from(dirty_area_start) };
 
-    println!(
-        "trying to write to fb a box of {:?}, at offset: {}, with len: {}",
-        area,
-        fb.pixel_offset(area.x as u32, area.y as u32) as usize,
-        dirty_area_length
-    );
+//     println!(
+//         "trying to write to fb a box of {:?}, at offset: {}, with len: {}",
+//         area,
+//         fb.pixel_offset(area.x as u32, area.y as u32) as usize,
+//         dirty_area_length
+//     );
 
-    unsafe { syscalls::seek(fd, fb.pixel_offset(area.x as u32, area.y as u32) as usize) }
-        .map_err(|_| GraphicsError::Unknown)?;
-    unsafe { syscalls::write(fd, dirty_area_start, dirty_area_length as usize) }
-        .map_err(|_| GraphicsError::Unknown)?;
-    Ok(())
-}
+//     unsafe { syscalls::seek(fd, fb.pixel_offset(area.x as u32, area.y as u32) as usize) }
+//         .map_err(|_| GraphicsError::Unknown)?;
+//     unsafe { syscalls::write(fd, dirty_area_start, dirty_area_length as usize) }
+//         .map_err(|_| GraphicsError::Unknown)?;
+//     Ok(())
+// }

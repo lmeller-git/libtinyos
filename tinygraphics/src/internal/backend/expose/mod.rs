@@ -14,7 +14,7 @@ use crate::{
     GraphicsError,
     backend::GraphicsBackend,
     internal::{
-        abi::{BoundingBox, raw_flush},
+        abi::BoundingBox,
         framebuffer::{FrameBuffer, KernelFBWrapper},
     },
 };
@@ -43,19 +43,16 @@ where
     }
 }
 
-impl<C> Default for PrimitiveDrawer<'_, RawFrameBuffer, C>
-where
-    C: RgbColor,
-{
-    fn default() -> Self {
-        // this will leak, however the drawer should be alive for the entire lifetime anyways
-        let buf = Box::leak(Box::new(RawFrameBuffer::new()));
-        Self {
-            buf: &*buf,
-            _phantom: PhantomData,
-        }
-    }
-}
+// impl<C> Default for PrimitiveDrawer<'_, RawFrameBuffer, C>
+// where
+//     C: RgbColor,
+// {
+//     fn default() -> Self {
+//         // this will leak, however the drawer should be alive for the entire lifetime anyways
+//         let buf = Box::leak(Box::new(RawFrameBuffer::new()));
+//         Self::new(buf)
+//     }
+// }
 
 impl<C> Default for PrimitiveDrawer<'_, KernelFBWrapper, C>
 where
@@ -64,10 +61,7 @@ where
     fn default() -> Self {
         // this will leak, however the drawer should be alive for the entire lifetime anyways
         let buf = Box::leak(Box::new(KernelFBWrapper::new()));
-        Self {
-            buf: &*buf,
-            _phantom: PhantomData,
-        }
+        Self::new(buf)
     }
 }
 
@@ -107,7 +101,7 @@ where
 {
     type Color = C;
     fn flush(&mut self, bounds: Rectangle) -> Result<(), GraphicsError> {
-        raw_flush(&bounds.into(), self.buf)
+        self.buf.flush(&bounds.into())
     }
 
     fn draw_primitive<D>(&mut self, glyph: &D) -> Result<D::Output, GraphicsError>
