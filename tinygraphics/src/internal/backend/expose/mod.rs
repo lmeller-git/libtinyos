@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-pub use crate::internal::framebuffer::RawFrameBuffer;
+pub use crate::internal::framebuffer::{KernelFBWrapper, RawFrameBuffer};
 
 pub struct PrimitiveDrawer<'a, B, C>
 where
