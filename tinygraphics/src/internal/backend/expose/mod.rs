@@ -10,16 +10,9 @@ use libtinyos::{
     syscalls::{self, FileDescriptor, OpenOptions},
 };
 
-use crate::{
-    GraphicsError,
-    backend::GraphicsBackend,
-    internal::{
-        abi::BoundingBox,
-        framebuffer::{FrameBuffer, KernelFBWrapper},
-    },
-};
+use crate::{GraphicsError, backend::GraphicsBackend, internal::abi::BoundingBox};
 
-pub use crate::internal::framebuffer::{KernelFBWrapper, RawFrameBuffer};
+pub use crate::internal::framebuffer::{FrameBuffer, KernelFBWrapper, RawFrameBuffer};
 
 pub struct PrimitiveDrawer<'a, B, C>
 where
