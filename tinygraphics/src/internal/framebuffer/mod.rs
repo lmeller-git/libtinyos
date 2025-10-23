@@ -275,3 +275,12 @@ impl FrameBuffer for KernelFBWrapper {
         Ok(())
     }
 }
+
+// # SAFETY
+// KernelFBWrapper can only point to memory managed by the kernel.
+// synchronization is also managed by the kernel.
+// however the kernel performs no synchronization.
+// this is fine, as FB is write-only.
+// the underlying memory will remanin valid for the entire lifetime of the program
+unsafe impl Sync for KernelFBWrapper {}
+unsafe impl Send for KernelFBWrapper {}
