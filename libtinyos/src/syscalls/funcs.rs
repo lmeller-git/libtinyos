@@ -17,6 +17,15 @@ pub unsafe fn open(path: *const u8, len: usize, flags: OpenOptions) -> SysResult
         .map(|r| r as FileDescriptor)
 }
 
+pub unsafe fn seek(fd: FileDescriptor, offset: usize) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Seek as u64, fd, offset) }.map(|_| ())
+}
+
+pub unsafe fn dup(old: FileDescriptor, new: Option<FileDescriptor>) -> SysResult<FileDescriptor> {
+    let new_ = new.map(|fd| fd as i32).unwrap_or(-1);
+    unsafe { syscall!(SysCallDispatch::Dup as u64, old, new_) }.map(|r| r as FileDescriptor)
+}
+
 pub unsafe fn write(fd: FileDescriptor, buf: *const u8, len: usize) -> SysResult<isize> {
     unsafe { syscall!(SysCallDispatch::Write as u64, fd, buf, len) }.map(|r| r as isize)
 }
@@ -34,8 +43,22 @@ pub unsafe fn yield_now() {
     _ = unsafe { syscall!(SysCallDispatch::Yield as u64) };
 }
 
-pub unsafe fn mmap(len: usize, ptr: *mut u8, flags: PageTableFlags) -> SysResult<*mut u8> {
-    unsafe { syscall!(SysCallDispatch::Mmap as u64, len, ptr, flags.bits()) }.map(|r| r as *mut u8)
+pub unsafe fn mmap(
+    len: usize,
+    ptr: *mut u8,
+    flags: PageTableFlags,
+    fd: Option<FileDescriptor>,
+) -> SysResult<*mut u8> {
+    unsafe {
+        syscall!(
+            SysCallDispatch::Mmap as u64,
+            len,
+            ptr,
+            flags.bits(),
+            fd.map(|f| f as i32).unwrap_or(-1)
+        )
+    }
+    .map(|r| r as *mut u8)
 }
 
 pub unsafe fn munmap(ptr: *mut u8, len: usize) {

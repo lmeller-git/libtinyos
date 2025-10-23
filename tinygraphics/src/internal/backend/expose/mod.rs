@@ -3,14 +3,20 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     Drawable,
     prelude::{Dimensions, DrawTarget, OriginDimensions, Point, Primitive, RgbColor},
-    primitives::{PrimitiveStyle, StyledDrawable},
+    primitives::{PrimitiveStyle, Rectangle, StyledDrawable},
 };
-use libtinyos::println;
+use libtinyos::{
+    println,
+    syscalls::{self, FileDescriptor, OpenOptions},
+};
 
 use crate::{
-    BatchedFlushes, GraphicsError,
+    GraphicsError,
     backend::GraphicsBackend,
-    internal::{abi::BoundingBox, framebuffer::FrameBuffer},
+    internal::{
+        abi::{BoundingBox, raw_flush},
+        framebuffer::{FrameBuffer, KernelFBWrapper},
+    },
 };
 
 pub use crate::internal::framebuffer::RawFrameBuffer;
@@ -21,7 +27,6 @@ where
     C: RgbColor,
 {
     buf: &'a B,
-    flush_state: BatchedFlushes,
     _phantom: PhantomData<C>,
 }
 
@@ -33,7 +38,6 @@ where
     pub fn new(buf: &'a B) -> Self {
         Self {
             buf,
-            flush_state: BatchedFlushes::new(),
             _phantom: PhantomData,
         }
     }
@@ -44,10 +48,24 @@ where
     C: RgbColor,
 {
     fn default() -> Self {
+        // this will leak, however the drawer should be alive for the entire lifetime anyways
         let buf = Box::leak(Box::new(RawFrameBuffer::new()));
         Self {
             buf: &*buf,
-            flush_state: BatchedFlushes::new(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<C> Default for PrimitiveDrawer<'_, KernelFBWrapper, C>
+where
+    C: RgbColor,
+{
+    fn default() -> Self {
+        // this will leak, however the drawer should be alive for the entire lifetime anyways
+        let buf = Box::leak(Box::new(KernelFBWrapper::new()));
+        Self {
+            buf: &*buf,
             _phantom: PhantomData,
         }
     }
@@ -88,22 +106,14 @@ where
     C: RgbColor,
 {
     type Color = C;
-    fn flush(&mut self) -> Result<(), GraphicsError> {
-        if self.is_dirty() {
-            self.flush_state.flush(self.buf.fd())?;
-        }
-        Ok(())
-    }
-
-    fn is_dirty(&self) -> bool {
-        !self.flush_state.is_empty()
+    fn flush(&mut self, bounds: Rectangle) -> Result<(), GraphicsError> {
+        raw_flush(&bounds.into(), self.buf)
     }
 
     fn draw_primitive<D>(&mut self, glyph: &D) -> Result<D::Output, GraphicsError>
     where
         D: Drawable<Color = Self::Color> + Dimensions,
     {
-        self.flush_state.push(glyph.bounding_box().into());
         glyph.draw(self)
     }
 }

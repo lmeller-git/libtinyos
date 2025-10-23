@@ -7,9 +7,9 @@ use libtinyos::{
     syscalls::{self, OpenOptions, PageTableFlags},
 };
 
-use crate::GraphicsError;
+use crate::{GraphicsError, internal::framebuffer::FrameBuffer};
 
-// const FRAMEBUFFER_START_ADDR: usize = 0x0000_1000_0000;
+pub const FRAMEBUFFER_START_ADDR: usize = 0x5000_1000_0000;
 
 #[repr(C)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -35,37 +35,61 @@ impl From<Rectangle> for BoundingBox {
 }
 
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct RawBitMap {
     addr: *mut u8,
     size: usize,
-    gfx_fd: u32,
 }
 
 impl RawBitMap {
     pub unsafe fn new(size: usize) -> Self {
-        // let addr = FRAMEBUFFER_START_ADDR as *mut u8;
+        let addr = FRAMEBUFFER_START_ADDR as *mut u8;
         let addr = unsafe {
             syscalls::mmap(
                 size,
-                null_mut(),
+                addr,
                 PageTableFlags::WRITABLE
                     | PageTableFlags::PRESENT
                     | PageTableFlags::USER_ACCESSIBLE,
+                None,
             )
         };
 
         let addr = addr.unwrap();
         assert!(!addr.is_null());
 
-        let f = "/proc/kernel/gfx/fb";
-        let gfx_fd =
-            unsafe { syscalls::open(f.as_ptr(), f.bytes().len(), OpenOptions::WRITE) }.unwrap();
+        Self { addr: addr, size }
+    }
+
+    pub fn new_from_kernel_fb(max_size: usize, offset: usize) -> Self {
+        let addr = FRAMEBUFFER_START_ADDR as *mut u8;
+        let fb = unsafe {
+            syscalls::open(
+                KERNEL_FB.as_ptr(),
+                KERNEL_FB.bytes().len(),
+                syscalls::OpenOptions::WRITE,
+            )
+        }
+        .unwrap();
+
+        unsafe { syscalls::seek(fb, offset) }.unwrap();
+
+        let addr = unsafe {
+            syscalls::mmap(
+                max_size,
+                addr,
+                PageTableFlags::USER_ACCESSIBLE
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::PRESENT,
+                Some(fb),
+            )
+        }
+        .unwrap();
+        assert!(!addr.is_null());
 
         Self {
-            addr: addr,
-            size,
-            gfx_fd: gfx_fd,
+            addr,
+            size: max_size,
         }
     }
 
@@ -75,10 +99,6 @@ impl RawBitMap {
 
     pub fn size(&self) -> usize {
         self.size
-    }
-
-    pub fn fd(&self) -> u32 {
-        self.gfx_fd
     }
 }
 
@@ -138,7 +158,39 @@ impl GFXConfig {
     }
 }
 
-pub fn raw_flush(bounding_boxes: &[BoundingBox], fd: u32) -> Result<(), GraphicsError> {
-    todo!()
-    // let res = unsafe { syscalls::write(fd, ptr as *const u8, len) };
+pub const KERNEL_FB: &str = "/proc/kernel/gfx/fb";
+
+pub fn raw_flush<F: FrameBuffer>(area: &BoundingBox, fb: &F) -> Result<(), GraphicsError> {
+    let fd = unsafe {
+        syscalls::open(
+            KERNEL_FB.as_ptr(),
+            KERNEL_FB.bytes().len(),
+            OpenOptions::WRITE,
+        )
+    }
+    .map_err(|_| GraphicsError::Unknown)?;
+    let dirty_area_start = unsafe {
+        fb.addr()
+            .add(fb.pixel_offset(area.x as u32, area.y as u32) as usize)
+    };
+    let dirty_area_end = unsafe {
+        fb.addr().add(
+            fb.pixel_offset((area.width + area.x) as u32, (area.height + area.y) as u32) as usize,
+        )
+    };
+
+    let dirty_area_length = unsafe { dirty_area_end.offset_from(dirty_area_start) };
+
+    println!(
+        "trying to write to fb a box of {:?}, at offset: {}, with len: {}",
+        area,
+        fb.pixel_offset(area.x as u32, area.y as u32) as usize,
+        dirty_area_length
+    );
+
+    unsafe { syscalls::seek(fd, fb.pixel_offset(area.x as u32, area.y as u32) as usize) }
+        .map_err(|_| GraphicsError::Unknown)?;
+    unsafe { syscalls::write(fd, dirty_area_start, dirty_area_length as usize) }
+        .map_err(|_| GraphicsError::Unknown)?;
+    Ok(())
 }

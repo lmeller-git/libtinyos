@@ -53,6 +53,7 @@ impl EnsureInitAlloc {
                     PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::USER_ACCESSIBLE,
+                    None,
                 )
             }
             .unwrap_or(null_mut());
@@ -81,6 +82,7 @@ impl EnsureInitAlloc {
                 PageTableFlags::PRESENT
                     | PageTableFlags::WRITABLE
                     | PageTableFlags::USER_ACCESSIBLE,
+                None,
             )
         }
         .map_err(|_| ())?;

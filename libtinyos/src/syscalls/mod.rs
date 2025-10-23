@@ -19,6 +19,8 @@ pub enum SysCallDispatch {
     Wait = 10,
     Machine = 11,
     GetPid = 12,
+    Seek = 13,
+    Dup = 14,
 }
 
 pub type FileDescriptor = u32;

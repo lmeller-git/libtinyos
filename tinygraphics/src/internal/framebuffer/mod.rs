@@ -4,9 +4,10 @@ use embedded_graphics::{
     prelude::{Dimensions, PixelColor, RgbColor},
     primitives::Rectangle,
 };
+use libtinyos::syscalls::{self, PageTableFlags};
 
 use crate::{
-    internal::abi::{GFXConfig, RawBitMap},
+    internal::abi::{FRAMEBUFFER_START_ADDR, GFXConfig, KERNEL_FB, RawBitMap},
     utils::memset,
 };
 
@@ -21,7 +22,6 @@ pub trait FrameBuffer {
     fn pixel_offset(&self, x: u32, y: u32) -> u32;
     fn set_pixel<C: RgbColor>(&self, x: u32, y: u32, color: &C);
     fn fill<C: RgbColor>(&self, area: Rectangle, color: &C);
-    fn fd(&self) -> u32;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -52,7 +52,7 @@ impl FrameBufferConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct RawFrameBuffer {
     buf: RawBitMap,
     dim: FrameBufferDimensions,
@@ -132,10 +132,6 @@ impl FrameBuffer for RawFrameBuffer {
             }
         }
     }
-
-    fn fd(&self) -> u32 {
-        self.buf.fd()
-    }
 }
 
 impl Default for RawFrameBuffer {
@@ -150,3 +146,119 @@ impl Default for RawFrameBuffer {
 // the underlying memory will remanin valid for the entire lifetime of the program
 unsafe impl Sync for RawFrameBuffer {}
 unsafe impl Send for RawFrameBuffer {}
+
+#[repr(C)]
+#[derive(PartialEq, Eq, Debug)]
+pub struct KernelFBWrapper {
+    addr: *mut u8,
+    dim: FrameBufferDimensions,
+    config: FrameBufferConfig,
+}
+
+impl KernelFBWrapper {
+    pub fn new() -> Self {
+        let config = GFXConfig::new();
+
+        let dim = FrameBufferDimensions {
+            height: config.height,
+            width: config.width,
+            pitch: config.pitch,
+        };
+        let config = FrameBufferConfig {
+            red_mask_shift: config.red_mask_shift,
+            red_mask_size: config.red_mask_size,
+            green_mask_shift: config.green_mask_shift,
+            green_mask_size: config.green_mask_size,
+            blue_mask_shift: config.blue_mask_shift,
+            blue_mask_size: config.blue_mask_size,
+            bpp: config.bpp,
+        };
+
+        let addr = FRAMEBUFFER_START_ADDR as *mut u8;
+
+        let fb = unsafe {
+            syscalls::open(
+                KERNEL_FB.as_ptr(),
+                KERNEL_FB.bytes().len(),
+                syscalls::OpenOptions::WRITE,
+            )
+        }
+        .unwrap();
+
+        unsafe { syscalls::seek(fb, 0) }.unwrap();
+
+        let size = (dim.pitch * dim.height) as usize;
+
+        let addr = unsafe {
+            syscalls::mmap(
+                size,
+                addr,
+                PageTableFlags::USER_ACCESSIBLE
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::PRESENT,
+                Some(fb),
+            )
+        }
+        .unwrap();
+        assert!(!addr.is_null());
+
+        Self { addr, dim, config }
+    }
+
+    pub fn size(&self) -> usize {
+        (self.dim.pitch * self.dim.height) as usize
+    }
+
+    pub unsafe fn fill_row<C: RgbColor>(&self, x: u32, y: u32, len: u32, color: &C) {
+        let offset = self.pixel_offset(x, y);
+        let color = self.config.get_rgb_pixel(color);
+        unsafe {
+            memset(
+                self.addr().add(offset as usize).cast::<u32>(),
+                len as usize,
+                color,
+            )
+        };
+    }
+}
+
+impl FrameBuffer for KernelFBWrapper {
+    fn addr(&self) -> *mut u8 {
+        self.addr
+    }
+
+    fn bpp(&self) -> u16 {
+        self.config.bpp
+    }
+
+    fn height(&self) -> u32 {
+        self.dim.height
+    }
+
+    fn width(&self) -> u32 {
+        self.dim.width
+    }
+
+    fn pitch(&self) -> u32 {
+        self.dim.pitch
+    }
+
+    fn pixel_offset(&self, x: u32, y: u32) -> u32 {
+        y * self.pitch() + x * (self.bpp() / 8) as u32
+    }
+
+    fn set_pixel<C: RgbColor>(&self, x: u32, y: u32, color: &C) {
+        let offset = self.pixel_offset(x, y);
+        let color = self.config.get_rgb_pixel(color);
+        unsafe { self.addr().add(offset as usize).cast::<u32>().write(color) };
+    }
+
+    fn fill<C: RgbColor>(&self, area: Rectangle, color: &C) {
+        let top_left = area.top_left.abs();
+        for row in top_left.y as u32..top_left.y as u32 + area.size.height {
+            unsafe {
+                self.fill_row(top_left.x as u32, row, area.size.width, color);
+            }
+        }
+    }
+}
