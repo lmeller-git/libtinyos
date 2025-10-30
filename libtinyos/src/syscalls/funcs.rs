@@ -76,3 +76,11 @@ pub unsafe fn get_pid() -> SysResult<u64> {
 pub unsafe fn chg_machine_state() {
     unsafe { syscall!(SysCallDispatch::Machine as u64) };
 }
+
+pub unsafe fn spawn(elf: *const u8, len: usize) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Spawn as u64, elf, len) }.map(|_| ())
+}
+
+pub unsafe fn dbg(buf: *const u8, len: usize) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Dbg as u64, buf, len) }.map(|_| ())
+}

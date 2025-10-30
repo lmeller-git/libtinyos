@@ -1,5 +1,5 @@
 use crate::{
-    println,
+    eprintln, println, serial_println,
     syscalls::{self, PageTableFlags},
 };
 
@@ -10,9 +10,12 @@ use core::{
 };
 use linked_list_allocator::{LockedHeap, align_up_size};
 
-const HEAP_START_ADDR: u64 = 0x0000_2000_0000;
+const HEAP_START_ADDR: u64 = 0x0000_8000_0000;
+// currently the kernel heap is mapped at this address. will change this at some point
+// TODO
+const MAX_HEAP_ADDR: u64 = 0x_4444_4444_0000;
 const START_HEAP_SIZE: usize = 1024 * 100; // 100 KiB
-const MAX_HEAP_SIZE: usize = 1024 * 100000; // 100.000 KiB == 100 MiB
+const MAX_HEAP_SIZE: usize = (MAX_HEAP_ADDR - HEAP_START_ADDR) as usize;
 
 const ALIGN: usize = 4096; // as kernel pages are 4 KiB currently
 
@@ -48,8 +51,8 @@ impl EnsureInitAlloc {
         _ = self.inner.try_init_once(|| {
             let heap_ptr = unsafe {
                 syscalls::mmap(
-                    START_HEAP_SIZE,
-                    START_HEAP_SIZE as *mut u8,
+                    align_up_size(START_HEAP_SIZE, ALIGN),
+                    HEAP_START_ADDR as *mut u8,
                     PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::USER_ACCESSIBLE,
@@ -61,6 +64,7 @@ impl EnsureInitAlloc {
             if heap_ptr.is_null() {
                 panic!("Allocator could not be initialized");
             }
+            assert_eq!(heap_ptr, HEAP_START_ADDR as *mut u8);
             let locked_heap = LockedHeap::empty();
             unsafe { locked_heap.lock().init(heap_ptr, START_HEAP_SIZE) };
             locked_heap
@@ -69,16 +73,17 @@ impl EnsureInitAlloc {
 
     fn request(&self) -> Result<(), ()> {
         let old_size = self.inner.get().unwrap().lock().size();
-        let new_size = old_size * 2;
-        if new_size > MAX_HEAP_SIZE {
+        let new_size = (old_size * 2).min(MAX_HEAP_SIZE);
+        if new_size == old_size {
             return Err(());
         }
         let new_size = align_up_size(new_size, ALIGN);
+        let start = HEAP_START_ADDR as usize + old_size;
 
         let ptr = unsafe {
             syscalls::mmap(
                 new_size - old_size,
-                (HEAP_START_ADDR as usize + old_size) as *mut u8,
+                start as *mut u8,
                 PageTableFlags::PRESENT
                     | PageTableFlags::WRITABLE
                     | PageTableFlags::USER_ACCESSIBLE,
@@ -90,6 +95,7 @@ impl EnsureInitAlloc {
         if ptr.is_null() {
             return Err(());
         }
+        assert_eq!(ptr, start as *mut u8);
         unsafe { self.inner.get().unwrap().lock().extend(new_size - old_size) };
         Ok(())
     }

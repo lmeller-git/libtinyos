@@ -9,7 +9,7 @@ use libtinyos::{
 
 use crate::{GraphicsError, internal::framebuffer::FrameBuffer};
 
-pub const FRAMEBUFFER_START_ADDR: usize = 0x5000_1000_0000;
+pub const FRAMEBUFFER_START_ADDR: usize = 0x0000_3000_0000;
 
 #[repr(C)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
