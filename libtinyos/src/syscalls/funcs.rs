@@ -84,3 +84,24 @@ pub unsafe fn spawn(elf: *const u8, len: usize) -> SysResult<()> {
 pub unsafe fn dbg(buf: *const u8, len: usize) -> SysResult<()> {
     unsafe { syscall!(SysCallDispatch::Dbg as u64, buf, len) }.map(|_| ())
 }
+
+pub unsafe fn execve(path: *const u8, len: usize) -> SysResult<u64> {
+    unsafe { syscall!(SysCallDispatch::Execve as u64, path, len) }
+}
+
+pub unsafe fn pthread_create() -> SysResult<u64> {
+    unsafe { syscall!(SysCallDispatch::PThreadCreate as u64) }
+}
+
+pub unsafe fn pthread_exit() -> ! {
+    _ = unsafe { syscall!(SysCallDispatch::PThreadExit as u64) };
+    unreachable!()
+}
+
+pub unsafe fn pthread_cancel(id: u64) -> SysResult<i64> {
+    unsafe { syscall!(SysCallDispatch::PThreadCancel as u64, id) }.map(|v| v as i64)
+}
+
+pub unsafe fn pthread_join(id: u64, timeout: i64) -> SysResult<i64> {
+    unsafe { syscall!(SysCallDispatch::PThreadJoin as u64, id, timeout) }.map(|v| v as i64)
+}

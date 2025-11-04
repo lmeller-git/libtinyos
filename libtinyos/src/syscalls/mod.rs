@@ -23,6 +23,11 @@ pub enum SysCallDispatch {
     Dup = 14,
     Spawn = 15,
     Dbg = 16,
+    Execve = 17,
+    PThreadCreate = 18,
+    PThreadExit = 19,
+    PThreadCancel = 20,
+    PThreadJoin = 21,
 }
 
 pub type FileDescriptor = u32;
