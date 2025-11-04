@@ -1,3 +1,5 @@
+use tinyos_abi::flags::{TaskStateChange, TaskWaitOptions, WaitOptions};
+
 use crate::{
     syscall,
     syscalls::{FileDescriptor, OpenOptions, PageTableFlags, SysCallDispatch, SysResult},
@@ -104,4 +106,30 @@ pub unsafe fn pthread_cancel(id: u64) -> SysResult<i64> {
 
 pub unsafe fn pthread_join(id: u64, timeout: i64) -> SysResult<i64> {
     unsafe { syscall!(SysCallDispatch::PThreadJoin as u64, id, timeout) }.map(|v| v as i64)
+}
+
+pub unsafe fn wait_pid(
+    id: u64,
+    timeout: i64,
+    w_flags: WaitOptions,
+    tw_flags: TaskWaitOptions,
+) -> SysResult<TaskStateChange> {
+    unsafe {
+        syscall!(
+            SysCallDispatch::WaitPID as u64,
+            id,
+            timeout,
+            w_flags.bits(),
+            tw_flags.bits()
+        )
+    }
+    .map(|r| TaskStateChange::from_bits_truncate(r as u16))
+}
+
+pub unsafe fn eventfd() -> SysResult<u64> {
+    unsafe { syscall!(SysCallDispatch::EventFD as u64) }
+}
+
+pub unsafe fn time() -> SysResult<u64> {
+    unsafe { syscall!(SysCallDispatch::Time as u64) }
 }
