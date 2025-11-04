@@ -65,8 +65,8 @@ pub unsafe fn munmap(ptr: *mut u8, len: usize) {
     unsafe { syscall!(SysCallDispatch::Munmap as u64, ptr, len) };
 }
 
-pub unsafe fn clone() -> SysResult<bool> {
-    unsafe { syscall!(SysCallDispatch::Clone as u64) }.map(|r| if r == 0 { false } else { true })
+pub unsafe fn fork() -> SysResult<bool> {
+    unsafe { syscall!(SysCallDispatch::Fork as u64) }.map(|r| if r == 0 { false } else { true })
 }
 
 pub unsafe fn get_pid() -> SysResult<u64> {
