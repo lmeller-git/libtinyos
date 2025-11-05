@@ -130,6 +130,10 @@ pub unsafe fn eventfd() -> SysResult<u64> {
     unsafe { syscall!(SysCallDispatch::EventFD as u64) }
 }
 
+pub unsafe fn waittime(time: u64) {
+    _ = unsafe { syscall!(SysCallDispatch::WaitTime as u64, time) };
+}
+
 pub unsafe fn time() -> SysResult<u64> {
     unsafe { syscall!(SysCallDispatch::Time as u64) }
 }
