@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(unused_imports)]
+#![feature(unsafe_cell_access)]
 
 extern crate alloc;
 

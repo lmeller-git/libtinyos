@@ -1,4 +1,7 @@
-use tinyos_abi::flags::{TaskStateChange, TaskWaitOptions, WaitOptions};
+use tinyos_abi::{
+    flags::{TaskStateChange, TaskWaitOptions, WaitOptions},
+    types::SysRetCode,
+};
 
 use crate::{
     syscall,
@@ -10,8 +13,8 @@ pub unsafe fn exit(status: i64) -> ! {
     unreachable!()
 }
 
-pub unsafe fn kill(id: u64, status: i64) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Kill as u64, id, status) }.map(|_| ())
+pub unsafe fn kill(pid: u64, status: i64) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Kill as u64, pid, status) }.map(|_| ())
 }
 
 pub unsafe fn open(path: *const u8, len: usize, flags: OpenOptions) -> SysResult<FileDescriptor> {
@@ -72,7 +75,7 @@ pub unsafe fn fork() -> SysResult<bool> {
 }
 
 pub unsafe fn get_pid() -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::GetPid as u64) }
+    unsafe { syscall!(SysCallDispatch::GetPID as u64) }
 }
 
 pub unsafe fn chg_machine_state() {
@@ -91,25 +94,39 @@ pub unsafe fn execve(path: *const u8, len: usize) -> SysResult<u64> {
     unsafe { syscall!(SysCallDispatch::Execve as u64, path, len) }
 }
 
-pub unsafe fn pthread_create() -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::PThreadCreate as u64) }
+pub unsafe fn thread_create(start_routine: *const (), args: *const ()) -> SysResult<u64> {
+    unsafe { syscall!(SysCallDispatch::ThreadCreate as u64, start_routine, args) }
 }
 
-pub unsafe fn pthread_exit() -> ! {
-    _ = unsafe { syscall!(SysCallDispatch::PThreadExit as u64) };
+pub unsafe fn thread_exit() -> ! {
+    _ = unsafe { syscall!(SysCallDispatch::ThreadExit as u64) };
     unreachable!()
 }
 
-pub unsafe fn pthread_cancel(id: u64) -> SysResult<i64> {
-    unsafe { syscall!(SysCallDispatch::PThreadCancel as u64, id) }.map(|v| v as i64)
+pub unsafe fn thread_cancel(tid: u64) -> SysResult<i64> {
+    unsafe { syscall!(SysCallDispatch::ThreadCancel as u64, tid) }.map(|v| v as i64)
 }
 
-pub unsafe fn pthread_join(id: u64, timeout: i64) -> SysResult<i64> {
-    unsafe { syscall!(SysCallDispatch::PThreadJoin as u64, id, timeout) }.map(|v| v as i64)
+pub unsafe fn thread_join(
+    tid: u64,
+    timeout: i64,
+    w_flags: WaitOptions,
+    tw_flags: TaskWaitOptions,
+) -> SysResult<TaskStateChange> {
+    unsafe {
+        syscall!(
+            SysCallDispatch::ThreadJoin as u64,
+            tid,
+            timeout,
+            w_flags.bits(),
+            tw_flags.bits()
+        )
+    }
+    .map(|r| TaskStateChange::from_bits_truncate(r as u16))
 }
 
 pub unsafe fn wait_pid(
-    id: u64,
+    pid: u64,
     timeout: i64,
     w_flags: WaitOptions,
     tw_flags: TaskWaitOptions,
@@ -117,7 +134,7 @@ pub unsafe fn wait_pid(
     unsafe {
         syscall!(
             SysCallDispatch::WaitPID as u64,
-            id,
+            pid,
             timeout,
             w_flags.bits(),
             tw_flags.bits()
@@ -136,4 +153,8 @@ pub unsafe fn waittime(time: u64) {
 
 pub unsafe fn time() -> SysResult<u64> {
     unsafe { syscall!(SysCallDispatch::Time as u64) }
+}
+
+pub unsafe fn get_tid() -> u64 {
+    unsafe { syscall!(SysCallDispatch::GetTID as u64) }.unwrap()
 }
