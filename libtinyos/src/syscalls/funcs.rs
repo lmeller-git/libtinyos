@@ -158,3 +158,11 @@ pub unsafe fn time() -> SysResult<u64> {
 pub unsafe fn get_tid() -> u64 {
     unsafe { syscall!(SysCallDispatch::GetTID as u64) }.unwrap()
 }
+
+pub unsafe fn get_pgrid() -> u64 {
+    unsafe { syscall!(SysCallDispatch::GetPgrID as u64) }.unwrap()
+}
+
+pub unsafe fn pipe(fds: *mut [u32; 2]) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Pipe as u64, fds as u64) }.map(|_| ())
+}
