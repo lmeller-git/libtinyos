@@ -4,13 +4,15 @@ use core::{
     mem,
 };
 
-use crate::{
-    syscalls::{self, STDOUT_FILENO},
-    tiny_alloc,
-};
+use crate::syscalls::{self, STDOUT_FILENO};
+
+#[cfg(feature = "alloc")]
+use crate::tiny_alloc;
 
 pub mod abi;
 
+// TODO this does not need alloc
+#[cfg(feature = "alloc")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __print(buf: *const c_char) {
     let buf = unsafe { CStr::from_ptr(buf) };
@@ -42,6 +44,7 @@ pub extern "C" fn __c_yield() {
     unsafe { syscalls::yield_now() };
 }
 
+#[cfg(feature = "alloc")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn malloc(size: usize) -> *mut u8 {
     let layout = Layout::from_size_align(size, mem::align_of::<usize>()).unwrap();

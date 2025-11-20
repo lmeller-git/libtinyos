@@ -5,13 +5,19 @@ macro_rules! println {
     () => {
         $crate::print!("\n")
     };
-    ($($arg:tt)*) => {$crate::print!("{}\n", format_args!($($arg)*))};
+    ($($arg:tt)*) => {
+        #[cfg(feature = "alloc")]
+        $crate::print!("{}\n", format_args!($($arg)*))
+    };
 }
 
 #[macro_export]
 macro_rules! print {
     () => {};
-    ($($arg:tt)*) => {$crate::io::print_str($crate::syscalls::STDOUT_FILENO, &alloc::format!($($arg)*)).unwrap()};
+    ($($arg:tt)*) => {
+        #[cfg(feature = "alloc")]
+        $crate::io::print_str($crate::syscalls::STDOUT_FILENO, &alloc::format!($($arg)*)).unwrap()
+    };
 }
 
 #[macro_export]
@@ -19,13 +25,19 @@ macro_rules! eprintln {
     () => {
         $crate::eprint!("\n")
     };
-    ($($arg:tt)*) => {$crate::eprint!("{}\n", format_args!($($arg)*))};
+    ($($arg:tt)*) => {
+        #[cfg(feature = "alloc")]
+        $crate::eprint!("{}\n", format_args!($($arg)*))
+    };
 }
 
 #[macro_export]
 macro_rules! eprint {
     () => {};
-    ($($arg:tt)*) => {$crate::io::print_str($crate::syscalls::STDERR_FILENO, &alloc::format!($($arg)*)).unwrap()};
+    ($($arg:tt)*) => {
+        #[cfg(feature = "alloc")]
+        $crate::io::print_str($crate::syscalls::STDERR_FILENO, &alloc::format!($($arg)*)).unwrap()
+    };
 }
 
 #[macro_export]
@@ -33,13 +45,19 @@ macro_rules! serial_println {
     () => {
         $crate::serial_print!("\n")
     };
-    ($($arg:tt)*) => {$crate::serial_print!("{}\n", format_args!($($arg)*))};
+    ($($arg:tt)*) => {
+        #[cfg(feature = "alloc")]
+        $crate::serial_print!("{}\n", format_args!($($arg)*))
+    };
 }
 
 #[macro_export]
 macro_rules! serial_print {
     () => {};
-    ($($arg:tt)*) => {$crate::io::dbg_print_str(&alloc::format!("\x1b[96m[USRINFO]\x1b[0m {}", format_args!($($arg)*))).unwrap()};
+    ($($arg:tt)*) => {
+        #[cfg(feature = "alloc")]
+        $crate::io::dbg_print_str(&alloc::format!("\x1b[96m[USRINFO]\x1b[0m {}", format_args!($($arg)*))).unwrap()
+    };
 }
 
 pub fn dbg_print_str(s: &str) -> SysResult<()> {
