@@ -86,8 +86,25 @@ pub unsafe fn dbg(buf: *const u8, len: usize) -> SysResult<()> {
     unsafe { syscall!(SysCallDispatch::Dbg as u64, buf, len) }.map(|_| ())
 }
 
-pub unsafe fn execve(path: *const u8, len: usize) -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::Execve as u64, path, len) }
+pub unsafe fn execve(
+    path: *const u8,
+    len: usize,
+    argc: *const u8,
+    argc_size: usize,
+    argv: *const u8,
+    argv_size: usize,
+) -> SysResult<u64> {
+    unsafe {
+        syscall!(
+            SysCallDispatch::Execve as u64,
+            path,
+            len,
+            argc,
+            argc_size,
+            argv,
+            argv_size
+        )
+    }
 }
 
 pub unsafe fn thread_create(start_routine: *const (), args: *const ()) -> SysResult<u64> {
