@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 #![feature(unsafe_cell_access, ptr_metadata)]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 /// cbindgen:ignore
@@ -12,14 +13,17 @@ pub(crate) mod internal;
 /// cbindgen:ignore
 pub mod syscalls;
 
-pub use c_api::*;
-
+#[cfg(feature = "alloc")]
 pub use crate::internal::alloc as tiny_alloc;
 pub use crate::internal::{collections, fs, io, path, process, sync, thread, time, utils};
+pub use c_api::*;
 
 #[panic_handler]
 fn lib_panic(info: &core::panic::PanicInfo) -> ! {
-    eprintln!("{}", info);
-    eprintln!("exiting...");
+    #[cfg(feature = "alloc")]
+    {
+        eprintln!("{}", info);
+        eprintln!("exiting...");
+    }
     unsafe { syscalls::exit(2) }
 }
