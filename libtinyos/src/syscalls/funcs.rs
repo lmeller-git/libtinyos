@@ -22,6 +22,10 @@ pub unsafe fn open(path: *const u8, len: usize, flags: OpenOptions) -> SysResult
         .map(|r| r as FileDescriptor)
 }
 
+pub unsafe fn close(fd: FileDescriptor) -> SysResult<()> {
+    unsafe { syscall!(SysCallDispatch::Close as u64, fd) }.map(|_| ())
+}
+
 pub unsafe fn seek(fd: FileDescriptor, offset: usize) -> SysResult<()> {
     unsafe { syscall!(SysCallDispatch::Seek as u64, fd, offset) }.map(|_| ())
 }
