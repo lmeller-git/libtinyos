@@ -9,10 +9,7 @@ use core::{
 };
 
 use alloc::{boxed::Box, sync::Arc};
-use tinyos_abi::{
-    flags::{TaskWaitOptions, WaitOptions},
-    types::SysRetCode,
-};
+use tinyos_abi::flags::{TaskWaitOptions, WaitOptions};
 
 use crate::{
     serial_println,

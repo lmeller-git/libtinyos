@@ -1,42 +1,47 @@
 use tinyos_abi::{
     flags::{TaskStateChange, TaskWaitOptions, WaitOptions},
-    types::SysRetCode,
+    types::{FromSyscall, SysErrCode, SysResult},
 };
 
 use crate::{
     syscall,
-    syscalls::{FileDescriptor, OpenOptions, PageTableFlags, SysCallDispatch, SysResult},
+    syscalls::{FileDescriptor, OpenOptions, PageTableFlags, SysCallDispatch},
 };
 
 pub unsafe fn exit(status: i64) -> ! {
-    unsafe { syscall!(SysCallDispatch::Exit as u64, status) }.unwrap();
+    unsafe { syscall!(SysCallDispatch::Exit as u64, status) };
     unreachable!()
 }
 
 pub unsafe fn kill(pid: u64, status: i64) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Kill as u64, pid, status) }.map(|_| ())
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Kill as u64, pid, status) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
 
 pub unsafe fn open(path: *const u8, len: usize, flags: OpenOptions) -> SysResult<FileDescriptor> {
-    unsafe { syscall!(SysCallDispatch::Open as u64, path, len, flags.bits()) }
-        .map(|r| r as FileDescriptor)
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Open as u64, path, len, flags.bits()) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn close(fd: FileDescriptor) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Close as u64, fd) }.map(|_| ())
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Close as u64, fd) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
 
 pub unsafe fn seek(fd: FileDescriptor, offset: usize) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Seek as u64, fd, offset) }.map(|_| ())
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Seek as u64, fd, offset) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
 
 pub unsafe fn dup(old: FileDescriptor, new: Option<FileDescriptor>) -> SysResult<FileDescriptor> {
     let new_ = new.map(|fd| fd as i32).unwrap_or(-1);
-    unsafe { syscall!(SysCallDispatch::Dup as u64, old, new_) }.map(|r| r as FileDescriptor)
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Dup as u64, old, new_) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn write(fd: FileDescriptor, buf: *const u8, len: usize) -> SysResult<isize> {
-    unsafe { syscall!(SysCallDispatch::Write as u64, fd, buf, len) }.map(|r| r as isize)
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Write as u64, fd, buf, len) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn read(
@@ -45,7 +50,8 @@ pub unsafe fn read(
     len: usize,
     timeout: usize,
 ) -> SysResult<isize> {
-    unsafe { syscall!(SysCallDispatch::Read as u64, fd, buf, len, timeout) }.map(|r| r as isize)
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Read as u64, fd, buf, len, timeout) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn yield_now() {
@@ -58,7 +64,7 @@ pub unsafe fn mmap(
     flags: PageTableFlags,
     fd: Option<FileDescriptor>,
 ) -> SysResult<*mut u8> {
-    unsafe {
+    let (rax, rdx) = unsafe {
         syscall!(
             SysCallDispatch::Mmap as u64,
             len,
@@ -66,28 +72,32 @@ pub unsafe fn mmap(
             flags.bits(),
             fd.map(|f| f as i32).unwrap_or(-1)
         )
-    }
-    .map(|r| r as *mut u8)
+    };
+    SysResult::<u64>::parse_from(rax, rdx).map(|r| r as *mut u8)
 }
 
 pub unsafe fn munmap(ptr: *mut u8, len: usize) {
-    unsafe { syscall!(SysCallDispatch::Munmap as u64, ptr, len) };
+    let (_rax, _rdx) = unsafe { syscall!(SysCallDispatch::Munmap as u64, ptr, len) };
 }
 
 pub unsafe fn fork() -> SysResult<bool> {
-    unsafe { syscall!(SysCallDispatch::Fork as u64) }.map(|r| if r == 0 { false } else { true })
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Fork as u64) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|r| if r > 0 { true } else { false })
 }
 
 pub unsafe fn get_pid() -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::GetPID as u64) }
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::GetPID as u64) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn spawn(elf: *const u8, len: usize) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Spawn as u64, elf, len) }.map(|_| ())
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Spawn as u64, elf, len) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
 
 pub unsafe fn dbg(buf: *const u8, len: usize) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Dbg as u64, buf, len) }.map(|_| ())
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Dbg as u64, buf, len) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
 
 pub unsafe fn execve(
@@ -98,7 +108,7 @@ pub unsafe fn execve(
     argv: *const u8,
     argv_size: usize,
 ) -> SysResult<u64> {
-    unsafe {
+    let (rax, rdx) = unsafe {
         syscall!(
             SysCallDispatch::Execve as u64,
             path,
@@ -108,11 +118,13 @@ pub unsafe fn execve(
             argv,
             argv_size
         )
-    }
+    };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn thread_create(start_routine: *const (), args: *const ()) -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::ThreadCreate as u64, start_routine, args) }
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::ThreadCreate as u64, start_routine, args) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn thread_exit() -> ! {
@@ -121,7 +133,8 @@ pub unsafe fn thread_exit() -> ! {
 }
 
 pub unsafe fn thread_cancel(tid: u64) -> SysResult<i64> {
-    unsafe { syscall!(SysCallDispatch::ThreadCancel as u64, tid) }.map(|v| v as i64)
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::ThreadCancel as u64, tid) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn thread_join(
@@ -130,7 +143,7 @@ pub unsafe fn thread_join(
     w_flags: WaitOptions,
     tw_flags: TaskWaitOptions,
 ) -> SysResult<TaskStateChange> {
-    unsafe {
+    let (rax, rdx) = unsafe {
         syscall!(
             SysCallDispatch::ThreadJoin as u64,
             tid,
@@ -138,8 +151,8 @@ pub unsafe fn thread_join(
             w_flags.bits(),
             tw_flags.bits()
         )
-    }
-    .map(|r| TaskStateChange::from_bits_truncate(r as u16))
+    };
+    SysResult::<u64>::parse_from(rax, rdx).map(|r| TaskStateChange::from_bits_truncate(r as u16))
 }
 
 pub unsafe fn wait_pid(
@@ -148,7 +161,7 @@ pub unsafe fn wait_pid(
     w_flags: WaitOptions,
     tw_flags: TaskWaitOptions,
 ) -> SysResult<TaskStateChange> {
-    unsafe {
+    let (rax, rdx) = unsafe {
         syscall!(
             SysCallDispatch::WaitPID as u64,
             pid,
@@ -156,30 +169,36 @@ pub unsafe fn wait_pid(
             w_flags.bits(),
             tw_flags.bits()
         )
-    }
-    .map(|r| TaskStateChange::from_bits_truncate(r as u16))
+    };
+    SysResult::<u64>::parse_from(rax, rdx).map(|r| TaskStateChange::from_bits_truncate(r as u16))
 }
 
 pub unsafe fn eventfd() -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::EventFD as u64) }
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::EventFD as u64) };
+    SysResult::parse_from(rax, rdx)
 }
 
-pub unsafe fn waittime(time: u64) {
-    _ = unsafe { syscall!(SysCallDispatch::WaitTime as u64, time) };
+pub unsafe fn waittime(time: u64) -> SysResult<()> {
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::WaitTime as u64, time) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
 
 pub unsafe fn time() -> SysResult<u64> {
-    unsafe { syscall!(SysCallDispatch::Time as u64) }
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Time as u64) };
+    SysResult::parse_from(rax, rdx)
 }
 
 pub unsafe fn get_tid() -> u64 {
-    unsafe { syscall!(SysCallDispatch::GetTID as u64) }.unwrap()
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::GetTID as u64) };
+    SysResult::parse_from(rax, rdx).unwrap()
 }
 
 pub unsafe fn get_pgrid() -> u64 {
-    unsafe { syscall!(SysCallDispatch::GetPgrID as u64) }.unwrap()
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::GetPgrID as u64) };
+    SysResult::parse_from(rax, rdx).unwrap()
 }
 
 pub unsafe fn pipe(fds: *mut [u32; 2]) -> SysResult<()> {
-    unsafe { syscall!(SysCallDispatch::Pipe as u64, fds as u64) }.map(|_| ())
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Pipe as u64, fds as u64) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }

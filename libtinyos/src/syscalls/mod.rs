@@ -4,14 +4,6 @@ mod funcs;
 pub use funcs::*;
 pub use tinyos_abi::{consts::*, flags::*, types::*};
 
-pub fn as_res(r1: u64, r2: i64) -> SysResult<u64> {
-    // in case of success r2 is guaranteed to be == SysResultCode::Success
-    if r2 != SysRetCode::Success as i64 {
-        return Err(r2.try_into().unwrap_or(SysRetCode::Unknown));
-    }
-    Ok(r1)
-}
-
 #[macro_export]
 macro_rules! syscall {
     ($rax:expr) => {{
@@ -24,8 +16,7 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 
     ($rax:expr, $rdi:expr) => {{
@@ -39,8 +30,7 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 
     ($rax:expr, $rdi:expr, $rsi:expr) => {{
@@ -55,8 +45,7 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 
     ($rax:expr, $rdi:expr, $rsi:expr, $rdx:expr) => {{
@@ -72,8 +61,7 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 
     ($rax:expr, $rdi:expr, $rsi:expr, $rdx:expr, $r10:expr) => {{
@@ -90,8 +78,7 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 
     ($rax:expr, $rdi:expr, $rsi:expr, $rdx:expr, $r10:expr, $r9:expr) => {{
@@ -109,8 +96,7 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 
     ($rax:expr, $rdi:expr, $rsi:expr, $rdx:expr, $r10:expr, $r9:expr, $r8:expr) => {{
@@ -129,7 +115,6 @@ macro_rules! syscall {
                 lateout("rax") ret,
                 lateout("rdx") ret2
             );
-
-        $crate::syscalls::as_res(ret, ret2 as i64)
+            (ret, ret2)
     }};
 }
