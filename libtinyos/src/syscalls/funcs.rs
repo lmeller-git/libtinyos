@@ -198,7 +198,7 @@ pub unsafe fn get_pgrid() -> u64 {
     SysResult::parse_from(rax, rdx).unwrap()
 }
 
-pub unsafe fn pipe(fds: *mut [u32; 2]) -> SysResult<()> {
-    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Pipe as u64, fds as u64) };
+pub unsafe fn pipe(fds: *mut [u32; 2], cap: isize) -> SysResult<()> {
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Pipe as u64, fds as u64, cap) };
     SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
