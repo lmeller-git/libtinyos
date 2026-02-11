@@ -1,6 +1,6 @@
 use tinyos_abi::{
     flags::{TaskStateChange, TaskWaitOptions, WaitOptions},
-    types::{FromSyscall, SysErrCode, SysResult},
+    types::{FDAction, FatPtr, FromSyscall, SysErrCode, SysResult},
 };
 
 use crate::{
@@ -103,20 +103,27 @@ pub unsafe fn dbg(buf: *const u8, len: usize) -> SysResult<()> {
 pub unsafe fn execve(
     path: *const u8,
     len: usize,
-    argc: *const u8,
-    argc_size: usize,
+    argc: usize,
     argv: *const u8,
-    argv_size: usize,
+    envc: usize,
+    envp: *const u8,
 ) -> SysResult<u64> {
+    let arg = FatPtr {
+        size: argc,
+        thin: argv,
+    };
+    let env = FatPtr {
+        size: envc,
+        thin: envp,
+    };
+
     let (rax, rdx) = unsafe {
         syscall!(
             SysCallDispatch::Execve as u64,
             path,
             len,
-            argc,
-            argc_size,
-            argv,
-            argv_size
+            &arg as *const FatPtr<u8>,
+            &env as *const FatPtr<u8>
         )
     };
     SysResult::parse_from(rax, rdx)
@@ -201,4 +208,40 @@ pub unsafe fn get_pgrid() -> u64 {
 pub unsafe fn pipe(fds: *mut [u32; 2], cap: isize) -> SysResult<()> {
     let (rax, rdx) = unsafe { syscall!(SysCallDispatch::Pipe as u64, fds as u64, cap) };
     SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
+}
+
+pub unsafe fn spawn_process(
+    path: *const u8,
+    len: usize,
+    argc: usize,
+    argv: *const u8,
+    envc: usize,
+    envp: *const u8,
+    fd_actions: *const FDAction,
+    fd_action_count: usize,
+) -> SysResult<u64> {
+    let arg = FatPtr {
+        size: argc,
+        thin: argv,
+    };
+    let env = FatPtr {
+        size: envc,
+        thin: envp,
+    };
+    let fd_actions = FatPtr {
+        size: fd_action_count,
+        thin: fd_actions,
+    };
+    let (rax, rdx) = unsafe {
+        syscall!(
+            SysCallDispatch::SpawnProcess as u64,
+            path,
+            len,
+            &arg as *const FatPtr<u8>,
+            &env as *const FatPtr<u8>,
+            &fd_actions as *const FatPtr<FDAction>
+        )
+    };
+
+    SysResult::parse_from(rax, rdx)
 }
