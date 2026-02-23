@@ -15,25 +15,25 @@ pub(crate) fn runtime<'a>() -> &'a RuntimeData {
 }
 
 pub(crate) struct RuntimeData {
-    args: ProcessArgs,
-    env: EnvVars,
+    args: Option<ProcessArgs>,
+    env: Option<EnvVars>,
 }
 
 impl RuntimeData {
-    pub fn env(&self) -> &EnvVars {
-        &self.env
+    pub fn env(&self) -> Option<&EnvVars> {
+        self.env.as_ref()
     }
 
-    pub fn args(&self) -> &ProcessArgs {
-        &self.args
+    pub fn args(&self) -> Option<&ProcessArgs> {
+        self.args.as_ref()
     }
 }
 
 impl RuntimeData {
     fn new(argc: usize, argv: *const u8, envc: usize, envp: *const u8) -> Self {
         Self {
-            args: ProcessArgs::new(argv, argc).unwrap(),
-            env: EnvVars::new(envp, envc).unwrap(),
+            args: ProcessArgs::new(argv, argc).ok(),
+            env: EnvVars::new(envp, envc).ok(),
         }
     }
 }
