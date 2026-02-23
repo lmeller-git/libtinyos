@@ -36,7 +36,11 @@ mod alloc_ {
         pub fn canonicalize(&mut self) {
             let mut root = if self.is_relative() {
                 // TODO we should cache this
-                let cwd = runtime().env().get("CWD").unwrap_or(ROOT_DIR);
+                let cwd = runtime()
+                    .env()
+                    .map(|env| env.get("CWD"))
+                    .flatten()
+                    .unwrap_or(ROOT_DIR);
                 Self::from_str(cwd)
             } else {
                 Self::new()

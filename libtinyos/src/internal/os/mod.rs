@@ -6,11 +6,11 @@ use crate::internal::rt::runtime;
 // these should really return their own iterator types
 // migth also want some lifetime data?
 
-pub fn env<'a>() -> &'a EnvVars {
+pub fn env<'a>() -> Option<&'a EnvVars> {
     runtime().env()
 }
 
-pub fn args<'a>() -> &'a ProcessArgs {
+pub fn args<'a>() -> Option<&'a ProcessArgs> {
     runtime().args()
 }
 
