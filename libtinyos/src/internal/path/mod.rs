@@ -79,6 +79,13 @@ mod alloc_ {
             }
         }
 
+        /// Joins self with other.
+        /// This is just a convenience wrpaper around PathBuf::push().
+        pub fn join<P: AsRef<Path> + ?Sized>(mut self, other: &P) -> Self {
+            self.push(other);
+            self
+        }
+
         pub fn add_extension(&mut self, ext: &str) {
             if !ext.starts_with(EXT_SEP) {
                 self.inner.push(EXT_SEP);
