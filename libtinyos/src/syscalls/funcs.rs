@@ -1,6 +1,6 @@
 use tinyos_abi::{
-    flags::{TaskStateChange, TaskWaitOptions, WaitOptions},
-    types::{FDAction, FatPtr, FromSyscall, SysErrCode, SysResult},
+    flags::{NodePermissions, TaskStateChange, TaskWaitOptions, WaitOptions},
+    types::{FDAction, FStat, FatPtr, FromSyscall, PermUpdateStrategy, SysErrCode, SysResult},
 };
 
 use crate::{
@@ -244,4 +244,26 @@ pub unsafe fn spawn_process(
     };
 
     SysResult::parse_from(rax, rdx)
+}
+
+pub unsafe fn fstat(fd: FileDescriptor, buf: *mut FStat) -> SysResult<()> {
+    let (rax, rdx) = unsafe { syscall!(SysCallDispatch::FStat as u64, fd, buf) };
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
+}
+
+pub unsafe fn update_perms(
+    fd: FileDescriptor,
+    perms: NodePermissions,
+    strategy: PermUpdateStrategy,
+) -> SysResult<()> {
+    let (rax, rdx) = unsafe {
+        syscall!(
+            SysCallDispatch::SetPerm as u64,
+            fd,
+            perms.bits() as u64,
+            strategy as u8 as u64
+        )
+    };
+
+    SysResult::<u64>::parse_from(rax, rdx).map(|_| ())
 }
